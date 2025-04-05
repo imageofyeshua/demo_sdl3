@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
+#include <SDL3/SDL_events.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_timer.h>
@@ -10,17 +11,22 @@
 
 #define SDL_FLAGS SDL_INIT_VIDEO
 
-#define WINDOW_TITLE "Open Window"
+#define WINDOW_TITLE "Close Window"
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
 
 struct Game {
   SDL_Window *window;
   SDL_Renderer *renderer;
+  SDL_Event event;
+  bool is_running;
 };
 
 bool game_init_sdl(struct Game *g);
+bool game_new(struct Game *g);
 void game_free(struct Game *g);
+void game_events(struct Game *g);
+void game_draw(struct Game *g);
 void game_run(struct Game *g);
 
 bool game_init_sdl(struct Game *g) {
@@ -43,6 +49,15 @@ bool game_init_sdl(struct Game *g) {
   return true;
 }
 
+bool game_new(struct Game *g) {
+  if (!game_init_sdl(g)) {
+    return false;
+  }
+  g->is_running = true;
+
+  return true;
+}
+
 void game_free(struct Game *g) {
   if (g->window) {
     SDL_DestroyWindow(g->window);
@@ -54,13 +69,33 @@ void game_free(struct Game *g) {
     g->renderer = NULL;
   }
   SDL_Quit();
+
+  printf("All Clean!\n");
+}
+
+void game_events(struct Game *g) {
+  while (SDL_PollEvent(&g->event)) {
+    switch (g->event.type) {
+    case SDL_EVENT_QUIT:
+      g->is_running = false;
+      break;
+    default:
+      break;
+    }
+  }
+}
+
+void game_draw(struct Game *g) {
+  SDL_RenderClear(g->renderer);
+  SDL_RenderPresent(g->renderer);
 }
 
 void game_run(struct Game *g) {
-  SDL_SetRenderDrawColor(g->renderer, 0, 64, 92, 255);
-  SDL_RenderClear(g->renderer);
-  SDL_RenderPresent(g->renderer);
-  SDL_Delay(3000);
+  while (g->is_running) {
+    game_events(g);
+    game_draw(g);
+    SDL_Delay(16);
+  }
 }
 
 int main(void) {
@@ -68,7 +103,7 @@ int main(void) {
 
   struct Game game = {0};
 
-  if (game_init_sdl(&game)) {
+  if (game_new(&game)) {
     game_run(&game);
 
     exit_status = EXIT_SUCCESS;
