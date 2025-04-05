@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_render.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 #include <stdbool.h>
@@ -20,6 +21,7 @@ struct Game {
 
 bool game_init_sdl(struct Game *g);
 void game_free(struct Game *g);
+void game_run(struct Game *g);
 
 bool game_init_sdl(struct Game *g) {
   if (!SDL_Init(SDL_FLAGS)) {
@@ -32,6 +34,12 @@ bool game_init_sdl(struct Game *g) {
     return false;
   }
 
+  g->renderer = SDL_CreateRenderer(g->window, NULL);
+  if (!g->renderer) {
+    fprintf(stderr, "Error creating Renderer: %s\n", SDL_GetError());
+    return false;
+  }
+
   return true;
 }
 
@@ -40,7 +48,19 @@ void game_free(struct Game *g) {
     SDL_DestroyWindow(g->window);
     g->window = NULL;
   }
+
+  if (g->renderer) {
+    SDL_DestroyRenderer(g->renderer);
+    g->renderer = NULL;
+  }
   SDL_Quit();
+}
+
+void game_run(struct Game *g) {
+  SDL_SetRenderDrawColor(g->renderer, 0, 64, 92, 255);
+  SDL_RenderClear(g->renderer);
+  SDL_RenderPresent(g->renderer);
+  SDL_Delay(3000);
 }
 
 int main(void) {
@@ -49,10 +69,10 @@ int main(void) {
   struct Game game = {0};
 
   if (game_init_sdl(&game)) {
+    game_run(&game);
+
     exit_status = EXIT_SUCCESS;
   }
-
-  SDL_Delay(5000);
 
   game_free(&game);
 
